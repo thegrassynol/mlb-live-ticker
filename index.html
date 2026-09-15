@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>MLB Live Ticker</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#111821;
+    --panel2:#0f151d;
+    --line:#26303c;
+    --text:#f5f7fa;
+    --muted:#9aa7b5;
+    --accent:#e31b23;
+    --accent2:#2a6fdb;
+    --live:#ff4d4f;
+    --h:92px;
+    --speed:90s;
+  }
+
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:transparent;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  }
+
+  .ticker{
+    height:var(--h);
+    width:100%;
+    display:flex;
+    background:linear-gradient(180deg,#0f151c 0%,#090d12 100%);
+    border-top:1px solid #303b49;
+    border-bottom:1px solid #06090d;
+    box-shadow:0 -10px 30px rgba(0,0,0,.22);
+    color:var(--text);
+  }
+
+  .brand{
+    width:112px;
+    flex:0 0 112px;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:
+      linear-gradient(135deg,#0d315e 0%,#0d315e 45%,#b7192e 46%,#b7192e 100%);
+    border-right:1px solid rgba(255,255,255,.15);
+    z-index:4;
+    overflow:hidden;
+  }
+  .brand:after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.09) 45%,transparent 70%);
+    pointer-events:none;
+  }
+  .brand-inner{
+    text-align:center;
+    line-height:1;
+    z-index:1;
+  }
+  .brand-title{
+    font-weight:950;
+    font-size:24px;
+    letter-spacing:-1px;
+  }
+  .brand-sub{
+    margin-top:7px;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:1.8px;
+    opacity:.92;
+  }
+
+  .viewport{
+    min-width:0;
+    flex:1;
+    overflow:hidden;
+    position:relative;
+  }
+  .viewport:before,
+  .viewport:after{
+    content:"";
+    position:absolute;
+    top:0;
+    bottom:0;
+    width:22px;
+    z-index:3;
+    pointer-events:none;
+  }
+  .viewport:before{
+    left:0;
+    background:linear-gradient(90deg,rgba(8,12,17,.95),transparent);
+  }
+  .viewport:after{
+    right:0;
+    background:linear-gradient(270deg,rgba(8,12,17,.95),transparent);
+  }
+
+  .track{
+    height:100%;
+    display:flex;
+    width:max-content;
+    will-change:transform;
+    animation:scroll var(--speed) linear infinite;
+  }
+  .group{
+    display:flex;
+    height:100%;
+  }
+
+  @keyframes scroll{
+    from{transform:translateX(0)}
+    to{transform:translateX(-50%)}
+  }
+
+  .item{
+    height:100%;
+    flex:0 0 auto;
+    border-right:1px solid var(--line);
+    background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);
+    position:relative;
+  }
+
+  .score{
+    width:265px;
+    padding:7px 10px 6px;
+    display:grid;
+    grid-template-rows: 1fr 1fr 20px;
+    gap:1px;
+  }
+
+  .team-row{
+    display:grid;
+    grid-template-columns:28px 44px 1fr 34px;
+    align-items:center;
+    gap:6px;
+    min-height:28px;
+  }
+
+  .logo{
+    width:24px;
+    height:24px;
+    object-fit:contain;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3));
+  }
+  .abbr{
+    font-weight:900;
+    font-size:17px;
+    letter-spacing:.2px;
+  }
+  .record{
+    font-size:11px;
+    color:var(--muted);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .runs{
+    font-size:20px;
+    font-weight:950;
+    text-align:right;
+  }
+
+  .game-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-top:1px solid #202a35;
+    padding-top:3px;
+    font-size:10px;
+    font-weight:800;
+    color:#cbd4de;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+  }
+  .live-dot{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:var(--live);
+    box-shadow:0 0 7px rgba(255,77,79,.9);
+    display:inline-block;
+    margin-right:5px;
+    vertical-align:1px;
+  }
+  .status-live{color:#ff7a7d}
+  .status-final{color:#cfd8e3}
+  .status-upcoming{color:#8fb9ff}
+
+  .news{
+    width:470px;
+    padding:10px 15px 8px 16px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    background:
+      linear-gradient(180deg,#131a23 0%,#0d131a 100%);
+  }
+  .news-kicker{
+    color:#ff6468;
+    font-weight:950;
+    font-size:10px;
+    letter-spacing:1.5px;
+    margin-bottom:6px;
+  }
+  .news-head{
+    font-size:17px;
+    line-height:1.15;
+    font-weight:850;
+    white-space:normal;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .news-source{
+    margin-top:5px;
+    color:var(--muted);
+    font-size:10px;
+    font-weight:700;
+  }
+
+  .empty{
+    width:540px;
+    padding:0 22px;
+    display:flex;
+    align-items:center;
+    font-size:18px;
+    font-weight:850;
+    color:#d5dde6;
+  }
+
+  .error{
+    width:620px;
+    padding:0 22px;
+    display:flex;
+    align-items:center;
+    font-size:15px;
+    font-weight:800;
+    color:#ffd1d1;
+  }
+
+  @media (max-height:80px){
+    :root{--h:76px}
+    .brand{width:96px;flex-basis:96px}
+    .brand-title{font-size:20px}
+    .score{width:240px}
+    .team-row{grid-template-columns:24px 42px 1fr 30px}
+    .logo{width:21px;height:21px}
+    .abbr{font-size:15px}
+    .runs{font-size:18px}
+    .news{width:430px}
+    .news-head{font-size:15px}
+  }
+</style>
+</head>
+<body>
+<div class="ticker">
+  <div class="brand">
+    <div class="brand-inner">
+      <div class="brand-title">MLB</div>
+      <div class="brand-sub">LIVE TICKER</div>
+    </div>
+  </div>
+
+  <div class="viewport">
+    <div class="track" id="track">
+      <div class="group" id="groupA"></div>
+      <div class="group" id="groupB"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard';
+const NEWS = 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/news?limit=8';
+
+const SCORE_REFRESH_MS = 20000;
+const NEWS_REFRESH_MS = 120000;
+const MAX_NEWS_ITEMS = 6;
+
+let games = [];
+let headlines = [];
+let lastScoreFetch = 0;
+let lastNewsFetch = 0;
+
+const esc = (s='') => String(s)
+  .replaceAll('&','&amp;')
+  .replaceAll('<','&lt;')
+  .replaceAll('>','&gt;')
+  .replaceAll('"','&quot;')
+  .replaceAll("'","&#039;");
+
+function formatRecord(team){
+  const r = team?.records?.[0]?.summary;
+  return r || '';
+}
+
+function gameState(comp){
+  const st = comp?.status?.type || {};
+  const detail = comp?.status?.type?.shortDetail || comp?.status?.type?.detail || '';
+  const state = st.state || '';
+  if(state === 'in') return {text: detail || 'LIVE', cls:'status-live', live:true};
+  if(state === 'post') return {text: detail || 'FINAL', cls:'status-final', live:false};
+  return {text: detail || 'UPCOMING', cls:'status-upcoming', live:false};
+}
+
+function scoreCard(event){
+  const comp = event?.competitions?.[0];
+  if(!comp) return '';
+
+  const teams = [...(comp.competitors || [])].sort((a,b)=>{
+    const ao = a.homeAway === 'away' ? 0 : 1;
+    const bo = b.homeAway === 'away' ? 0 : 1;
+    return ao - bo;
+  });
+
+  if(teams.length < 2) return '';
+
+  const meta = gameState(comp);
+  const venue = comp?.venue?.fullName || '';
+
+  const rows = teams.map(t=>{
+    const team = t.team || {};
+    const logo = team.logo || team.logos?.[0]?.href || '';
+    const abbr = team.abbreviation || team.shortDisplayName || '';
+    const score = t.score ?? '-';
+    return `
+      <div class="team-row">
+        <img class="logo" src="${esc(logo)}" alt="">
+        <div class="abbr">${esc(abbr)}</div>
+        <div class="record">${esc(formatRecord(t))}</div>
+        <div class="runs">${esc(score)}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="item score">
+      ${rows}
+      <div class="game-meta">
+        <span class="${meta.cls}">${meta.live ? '<span class="live-dot"></span>' : ''}${esc(meta.text)}</span>
+        <span>${esc(venue)}</span>
+      </div>
+    </div>`;
+}
+
+function newsCard(article){
+  const head = article?.headline || article?.title || '';
+  if(!head) return '';
+  const source = article?.source || 'ESPN MLB';
+  return `
+    <div class="item news">
+      <div class="news-kicker">MLB NEWS</div>
+      <div class="news-head">${esc(head)}</div>
+      <div class="news-source">${esc(source)}</div>
+    </div>`;
+}
+
+function composeItems(){
+  const items = [];
+
+  if(games.length){
+    games.forEach((g, i)=>{
+      items.push(scoreCard(g));
+      if((i+1) % 3 === 0 && headlines.length){
+        const h = headlines[Math.floor(i/3) % headlines.length];
+        items.push(newsCard(h));
+      }
+    });
+  } else {
+    items.push(`<div class="item empty">No MLB games are currently listed for today.</div>`);
+  }
+
+  if(headlines.length){
+    const alreadyInserted = Math.floor(games.length / 3);
+    headlines.slice(alreadyInserted, alreadyInserted + 2).forEach(h=>items.push(newsCard(h)));
+  }
+
+  return items.filter(Boolean).join('');
+}
+
+function render(){
+  const a = document.getElementById('groupA');
+  const b = document.getElementById('groupB');
+  const html = composeItems();
+  a.innerHTML = html;
+  b.innerHTML = html;
+
+  // Adapt scroll duration to total content width so speed feels consistent.
+  requestAnimationFrame(()=>{
+    const width = a.scrollWidth;
+    const pxPerSecond = 72;
+    const seconds = Math.max(35, width / pxPerSecond);
+    document.documentElement.style.setProperty('--speed', `${seconds}s`);
+  });
+}
+
+async function loadScores(){
+  try{
+    const r = await fetch(`${SCOREBOARD}?_=${Date.now()}`, {cache:'no-store'});
+    if(!r.ok) throw new Error(`Scoreboard HTTP ${r.status}`);
+    const data = await r.json();
+    games = data?.events || [];
+    lastScoreFetch = Date.now();
+    render();
+  }catch(err){
+    console.error(err);
+    if(!games.length){
+      const a = document.getElementById('groupA');
+      const b = document.getElementById('groupB');
+      const html = `<div class="item error">Unable to load MLB scores right now. Retrying automatically…</div>`;
+      a.innerHTML = html; b.innerHTML = html;
+    }
+  }
+}
+
+async function loadNews(){
+  try{
+    const r = await fetch(`${NEWS}&_=${Date.now()}`, {cache:'no-store'});
+    if(!r.ok) throw new Error(`News HTTP ${r.status}`);
+    const data = await r.json();
+    headlines = (data?.articles || []).slice(0, MAX_NEWS_ITEMS);
+    lastNewsFetch = Date.now();
+    render();
+  }catch(err){
+    console.error(err);
+  }
+}
+
+function refreshLoop(){
+  const now = Date.now();
+  if(now - lastScoreFetch > SCORE_REFRESH_MS) loadScores();
+  if(now - lastNewsFetch > NEWS_REFRESH_MS) loadNews();
+}
+
+loadScores();
+loadNews();
+setInterval(refreshLoop, 5000);
+</script>
+</body>
+</html>
